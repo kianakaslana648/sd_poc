@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { fetchGallery } from "@/lib/api";
 import ImageCard from "@/components/ImageCard";
 
@@ -16,52 +16,96 @@ export default function GalleryGrid() {
   const [items, setItems] = useState<Item[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
+  // ======================
+  // LOAD DATA (safe)
+  // ======================
+  const load = useCallback(async (p: number) => {
+    if (loading) return;
+    if (!hasMore && p !== 1) return;
+
+    setLoading(true);
+
+    try {
+      const data = await fetchGallery(p);
+
+      setItems((prev) => {
+        // 防止重复数据（可选但推荐）
+        const existingIds = new Set(prev.map((i) => i.id));
+        const newItems = data.items.filter((i: Item) => !existingIds.has(i.id));
+        return [...prev, ...newItems];
+      });
+
+      setHasMore(data.has_more);
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, hasMore]);
+
+  // ======================
+  // INITIAL LOAD
+  // ======================
   useEffect(() => {
-    load(page);
+    load(1);
   }, []);
 
-  async function load(p: number) {
-    const data = await fetchGallery(p);
-
-    setItems((prev) => [...prev, ...data.items]);
-    setHasMore(data.has_more);
-  }
-
+  // ======================
+  // INFINITE SCROLL
+  // ======================
   useEffect(() => {
     if (!hasMore) return;
+    if (loading) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        const next = page + 1;
-        setPage(next);
-        load(next);
+    const el = loaderRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && !loading) {
+          setPage((prev) => {
+            const next = prev + 1;
+            load(next);
+            return next;
+          });
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px", // ⭐ 提前加载，体验更丝滑
+        threshold: 0,
       }
-    });
+    );
 
-    if (loaderRef.current) {
-      observer.observe(loaderRef.current);
-    }
+    observer.observe(el);
 
     return () => observer.disconnect();
-  }, [page, hasMore]);
+  }, [hasMore, loading, load]);
 
+  // ======================
+  // UI
+  // ======================
   return (
-    <>
-      {/* masonry grid */}
-      <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+    <div className="w-full">
+      {/* GRID (stable layout) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {items.map((item) => (
           <ImageCard key={item.id} item={item} />
         ))}
       </div>
 
-      {/* loader */}
+      {/* LOADING SENTINEL */}
       {hasMore && (
-        <div ref={loaderRef} className="h-10 mt-10 text-center text-zinc-500">
-          Loading...
+        <div
+          ref={loaderRef}
+          className="h-16 flex items-center justify-center text-zinc-500"
+        >
+          {loading ? "Loading..." : "Scroll to load more"}
         </div>
       )}
-    </>
+    </div>
   );
 }

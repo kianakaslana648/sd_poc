@@ -14,7 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-zinc-950 text-zinc-100">
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex h-screen">
 
           {/* Sidebar */}
           <aside className="w-64 border-r border-zinc-200 bg-white/80 backdrop-blur-xl shadow-sm">
@@ -66,8 +66,8 @@ export default function RootLayout({
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-hidden">
-            <div className="h-full w-full">
+          <main className="flex-1 overflow-y-auto">
+            <div className="w-full min-h-full">
               {children}
             </div>
           </main>
