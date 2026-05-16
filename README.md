@@ -19,6 +19,7 @@ It provides a simple workflow:
 
 ## 🏗️ Architecture
 
+```text
 ┌──────────────────────┐
 │ Frontend (React)     │
 └─────────┬────────────┘
@@ -32,13 +33,14 @@ It provides a simple workflow:
 └─────────┬────────────┘
           ↓
 ┌────────────────────────────────────┐
-│ Worker (Diffusers + PyTorch)      │
+│ Worker (Diffusers + PyTorch)       │
 └─────────┬──────────────────────────┘
           ↓
 ┌────────────────────────────────────┐
 │ Images + Metadata                  │
-│ (MongoDB / Object Storage)        │
+│ (MongoDB / Object Storage)         │
 └────────────────────────────────────┘
+```
 
 
 ---
@@ -68,13 +70,13 @@ It provides a simple workflow:
 
 ### 🏠 Home / Generation UI
 
-![Home UI](./docs/images/home.png)
+![Home UI](./docs/images/home.jpg)
 
 ---
 
 ### 🎛️ Control Panel
 
-![ControlNet UI](./docs/images/controlnet.jpg)
+![ControlNet UI](./docs/images/controlnet.png)
 
 ---
 
