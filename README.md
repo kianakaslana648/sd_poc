@@ -19,15 +19,26 @@ It provides a simple workflow:
 
 ## 🏗️ Architecture
 
-Frontend (React)
-↓
-FastAPI Backend
-↓
-Redis Queue
-↓
-Worker (Diffusers + PyTorch)
-↓
-Generated Images + Metadata (MongoDB / Storage)
+┌──────────────────────┐
+│ Frontend (React)     │
+└─────────┬────────────┘
+          ↓
+┌──────────────────────┐
+│ FastAPI Backend      │
+└─────────┬────────────┘
+          ↓
+┌──────────────────────┐
+│ Redis Queue          │
+└─────────┬────────────┘
+          ↓
+┌────────────────────────────────────┐
+│ Worker (Diffusers + PyTorch)      │
+└─────────┬──────────────────────────┘
+          ↓
+┌────────────────────────────────────┐
+│ Images + Metadata                  │
+│ (MongoDB / Object Storage)        │
+└────────────────────────────────────┘
 
 
 ---
@@ -43,7 +54,9 @@ Generated Images + Metadata (MongoDB / Storage)
 - PyTorch
 - Diffusers
 - Transformers
-- OpenCV (optional)
+- Accelerate
+- Xformers
+- OpenCV
 
 ### Frontend
 - React
@@ -61,7 +74,7 @@ Generated Images + Metadata (MongoDB / Storage)
 
 ### 🎛️ Control Panel
 
-![ControlNet UI](./docs/images/controlnet.png)
+![ControlNet UI](./docs/images/controlnet.jpg)
 
 ---
 
@@ -72,7 +85,7 @@ Generated Images + Metadata (MongoDB / Storage)
 ---
 
 ## 🚀 Notes
-
+- Successfully tested on NVIDIA RTX 5090 GPU
 - Worker must run on GPU-enabled machine
 - Use `opencv-python-headless` in Docker
 - Ensure Redis + MongoDB are running before backend start
