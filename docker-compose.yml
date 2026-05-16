@@ -1,0 +1,138 @@
+version: "3.9"
+
+services:
+
+  # =========================
+  # Redis (queue layer)
+  # =========================
+  redis:
+    image: redis:7
+    container_name: redis-ai
+    ports:
+      - "6379:6379"
+    restart: always
+
+  # =========================
+  # Redis UI (Redis Insight)
+  # =========================
+  redis-ui:
+    image: redis/redisinsight:latest
+    container_name: redis-ui
+    ports:
+      - "5540:5540"
+    restart: always
+    depends_on:
+      - redis
+
+  # =========================
+  # MongoDB
+  # =========================
+  mongodb:
+    image: mongo:7
+    container_name: mongodb-ai
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo_data:/data/db
+
+  # =========================
+  # MongoDB UI
+  # =========================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-ui
+    restart: always
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+      ME_CONFIG_MONGODB_SERVER: mongodb
+
+  # =========================
+  # Backend (FastAPI)
+  # =========================
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: fastapi-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - mongodb
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://admin:password@mongodb:27017
+      - PYTHONPATH=/app
+    volumes:
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+      - ./data:/app/data
+      - ./outputs:/outputs
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # =========================
+  # Worker
+  # # =========================
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    container_name: sd-worker
+    depends_on:
+      - redis
+      - mongodb
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGO_URL=mongodb://admin:password@mongodb:27017
+      - PYTHONPATH=/app
+    volumes:
+      - ./worker:/app/worker
+      - ./shared:/app/shared
+      - ./sd_models:/sd_models
+      - ./outputs:/outputs
+      - ./data:/app/data
+    command: python worker/main.py
+
+  # =========================
+  # Frontend (Next.js)
+  # =========================
+  frontend:
+    build:
+      context: ./frontend/sd-controlnet-studio
+      dockerfile: Dockerfile
+    container_name: nextjs-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend/sd-controlnet-studio:/app
+      - /app/node_modules
+      - /app/.next
+    working_dir: /app
+    command: npm run dev -- --hostname 0.0.0.0
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  next_node_modules:
+  next_cache:
